@@ -295,10 +295,19 @@
   var $String = String;
 
   /* global document */
+  //尝试获取 document.all,没有则是null
   var domAll = (typeof document === 'undefined' || !document) ? null : document.all;
+  /**
+   * 判断参数是否是 真正的null或者undefined
+   */
   var isNullOrUndefined = domAll == null ? function isNullOrUndefined(x) {
+    //当不存在 document.all时, 只有基本值 null或者undefined符合。
     return x == null;
   } : function isNullOrUndefinedAndNotDocumentAll(x) {
+    /**
+     * 由于 document.all==null 和 document.all==undefined均为true 因此还需要额外判断参数不为document.all
+     * https://github.com/Reveur000/es6-shim/issues/3
+     */
     return x == null && x !== domAll;
   };
 
@@ -328,10 +337,19 @@
     // http://www.ecma-international.org/ecma-262/6.0/#sec-toobject
     // but is not well optimized by runtimes and creates an object
     // whenever it returns false, and thus is very slow.
+    /**
+     * 这里判断的对象 是 非null的 对象。
+     * 包含标准内置对象,一般对象继承自Object 和 宿主环境的非标准的对象
+     */
     TypeIsObject: function (x) {
       if (x === void 0 || x === null || x === true || x === false) {
         return false;
       }
+      /**
+       * 这里 通过typeof操作符判断 函数和对象。
+       * 特别地。 typeof document.all ==="undefined" 但是document.all肯定是属于对象的。
+       * https://github.com/Reveur000/es6-shim/issues/2
+       */
       return typeof x === 'function' || typeof x === 'object' || x === domAll;
     },
 
@@ -2133,12 +2151,21 @@
   var PromiseShim = (function () {
     var setTimeout = globals.setTimeout;
     // some environments don't have setTimeout - no way to shim here.
+    /**
+     * 如果setTimeout函数都不存在的话,那么Promise是肯定实现不了的。
+     * 这里要注意的一点就是:在IE8中,typeof setTimeout 返回的是 'object'
+     * https://github.com/Reveur000/es6-shim/issues/1
+     */
     if (typeof setTimeout !== 'function' && typeof setTimeout !== 'object') { return; }
 
+    /**
+     * 用于判断一个对象是否是Promise对象
+     */
     ES.IsPromise = function (promise) {
       if (!ES.TypeIsObject(promise)) {
         return false;
       }
+      //TODO: 为什么对象没有_promise属性就不被判断为Promise。 原生的promise并没有这个属性啊?
       if (typeof promise._promise === 'undefined') {
         return false; // uninitialized, or missing our hidden field.
       }
